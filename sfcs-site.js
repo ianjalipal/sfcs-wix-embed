@@ -43,6 +43,48 @@
       var o = typeof a === 'object' ? a : { top: y };
       b.scrollBy({ top: o.top || 0, behavior: o.behavior || 'auto' });
     };
+
+    // A wheel or touch on a position:fixed element (the pinned hero, the header) is not passed on to <body> by
+    // the browser, so the page would not scroll while the pointer is over it. Pass it on ourselves.
+    function inFixed(el) {
+      for (var n = el; n && n !== document.body; n = n.parentElement) {
+        if (getComputedStyle(n).position === 'fixed') return true;
+      }
+      return false;
+    }
+    function innerScroller(el, dy) {
+      for (var n = el; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+        var cs = getComputedStyle(n);
+        if (/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 1) {
+          if ((dy > 0 && n.scrollTop + n.clientHeight < n.scrollHeight - 1) || (dy < 0 && n.scrollTop > 0)) return true;
+        }
+      }
+      return false;
+    }
+    var target = null, raf = 0;
+    function glide() {
+      var d = target - b.scrollTop;
+      if (Math.abs(d) < 0.5) { b.scrollTop = target; target = null; raf = 0; return; }
+      b.scrollTop += d * 0.2;
+      raf = requestAnimationFrame(glide);
+    }
+    window.addEventListener('wheel', function (e) {
+      if (e.ctrlKey || e.defaultPrevented || !bodyScrolls() || !inFixed(e.target) || innerScroller(e.target, e.deltaY)) return;
+      e.preventDefault();
+      var dy = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY;
+      var max = b.scrollHeight - b.clientHeight;
+      target = Math.max(0, Math.min(max, (target == null ? b.scrollTop : target) + dy));
+      if (!raf) raf = requestAnimationFrame(glide);
+    }, { passive: false });
+    var lastY = null;
+    window.addEventListener('touchstart', function (e) { lastY = e.touches.length === 1 ? e.touches[0].clientY : null; }, { passive: true });
+    window.addEventListener('touchmove', function (e) {
+      if (lastY == null || e.touches.length !== 1 || !bodyScrolls() || !inFixed(e.target) || innerScroller(e.target, lastY - e.touches[0].clientY)) return;
+      var y = e.touches[0].clientY;
+      b.scrollTop += lastY - y;
+      lastY = y;
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
   }
 
   class SfcsSite extends HTMLElement {
