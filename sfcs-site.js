@@ -61,15 +61,19 @@
       }
       return false;
     }
-    var target = null, raf = 0;
+    var target = null, raf = 0, lastSet = null;
+    function stopGlide() { target = null; lastSet = null; if (raf) cancelAnimationFrame(raf); raf = 0; }
     function glide() {
+      // someone else (native scroll, a menu click) moved the page: let go
+      if (lastSet != null && Math.abs(b.scrollTop - lastSet) > 3) { stopGlide(); return; }
       var d = target - b.scrollTop;
-      if (Math.abs(d) < 0.5) { b.scrollTop = target; target = null; raf = 0; return; }
+      if (Math.abs(d) < 0.5) { b.scrollTop = target; stopGlide(); return; }
       b.scrollTop += d * 0.2;
+      lastSet = b.scrollTop;
       raf = requestAnimationFrame(glide);
     }
     window.addEventListener('wheel', function (e) {
-      if (e.ctrlKey || e.defaultPrevented || !bodyScrolls() || !inFixed(e.target) || innerScroller(e.target, e.deltaY)) return;
+      if (e.ctrlKey || e.defaultPrevented || !bodyScrolls() || !inFixed(e.target) || innerScroller(e.target, e.deltaY)) { stopGlide(); return; }
       e.preventDefault();
       var dy = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY;
       var max = b.scrollHeight - b.clientHeight;
