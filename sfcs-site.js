@@ -100,6 +100,13 @@
         addOnce('sfcs-font-' + i, function () { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; return l; });
       });
       addOnce('sfcs-style', function () { var s = document.createElement('style'); s.textContent = STYLE; return s; });
+      // Wix Studio scrolls <body> inside the page. Hand scrolling back to the window, like a normal website,
+      // so pinned sections, scroll animations and the scroll bar all behave as designed.
+      addOnce('sfcs-wix-scroll', function () {
+        var s = document.createElement('style');
+        s.textContent = 'html{overflow-y:auto!important;height:auto!important}body{overflow:visible!important;height:auto!important;min-height:0!important}';
+        return s;
+      });
       this.innerHTML = BODY;
       for (var i = 0; i < LIBS.length; i++) await loadScript(LIBS[i]);
       shimScroll();
